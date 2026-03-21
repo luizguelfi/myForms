@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 
-// ─── PERGUNTAS ────────────────────────────────────────────────────────────────
 const QUESTIONS = [
   {
     id: "q1", block: "Bloco 01 · Sua rotina",
@@ -75,60 +74,32 @@ const QUESTIONS = [
     text: "Se você pudesse mudar uma coisa — só uma — na forma como cuida da sua nutrição e suplementação hoje, o que seria?",
     type: "voice",
     placeholder: "Pode ser qualquer coisa...",
-    required: true,
   },
 ];
 
 const TOTAL = QUESTIONS.length;
+const GREEN = "#25D366";
+const BG = "#0a0a0a";
+const SURFACE = "#161616";
+const BORDER = "#2a2a2a";
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
 function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return Math.random().toString(36).slice(2);
 }
 
-function getNextIndex(questions, currentIndex, answers) {
-  const current = questions[currentIndex];
-  if (current?.skipIf && current.skipTo) {
-    const ans = answers[current.id];
-    if (current.skipIf(ans)) {
-      const skipIdx = questions.findIndex((q) => q.id === current.skipTo);
-      if (skipIdx !== -1) return skipIdx;
+function getNextIndex(currentIndex, answers) {
+  const current = QUESTIONS[currentIndex];
+  if (current?.skipIf && current?.skipTo) {
+    if (current.skipIf(answers[current.id])) {
+      const idx = QUESTIONS.findIndex((q) => q.id === current.skipTo);
+      if (idx !== -1) return idx;
     }
   }
   return currentIndex + 1;
 }
 
-// ─── COMPONENTES ──────────────────────────────────────────────────────────────
-function TypingIndicator() {
-  return (
-    <div style={s.bubble_bot}>
-      <span style={s.dot} className="d1" />
-      <span style={s.dot} className="d2" />
-      <span style={s.dot} className="d3" />
-    </div>
-  );
-}
-
-function BotBubble({ text, block }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, marginBottom: 4 }}>
-      {block && <span style={s.blockTag}>{block}</span>}
-      <div style={s.bubble_bot_text}>{text}</div>
-    </div>
-  );
-}
-
-function UserBubble({ text }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-      <div style={s.bubble_user}>{text}</div>
-    </div>
-  );
-}
-
-// ─── APP PRINCIPAL ────────────────────────────────────────────────────────────
 export default function FormsVoz() {
-  const [phase, setPhase] = useState("intro"); // intro | chat | done
+  const [phase, setPhase] = useState("intro");
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [messages, setMessages] = useState([]);
@@ -136,27 +107,22 @@ export default function FormsVoz() {
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [hasVoice, setHasVoice] = useState(false);
-  const [saved, setSaved] = useState(false);
-
   const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
-  const sessionId = useRef(uid());
 
-  // Checa suporte à voz
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     setHasVoice(!!SR);
   }, []);
 
-  // Scroll automático
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  const answeredCount = Object.keys(answers).length;
+  const progress = Math.round((answeredCount / TOTAL) * 100);
   const currentQ = QUESTIONS[qIndex];
-  const progress = Math.round((Object.keys(answers).length / TOTAL) * 100);
 
-  // Mostra pergunta com delay de digitação
   function showQuestion(idx) {
     setIsTyping(true);
     setTimeout(() => {
@@ -165,116 +131,119 @@ export default function FormsVoz() {
         ...prev,
         { type: "bot", text: QUESTIONS[idx].text, block: QUESTIONS[idx].block, id: uid() },
       ]);
-    }, 900);
+    }, 800);
   }
 
   function startChat() {
     setPhase("chat");
-    showQuestion(0);
+    setMessages([{
+      type: "bot",
+      text: "Oi! Vou te fazer algumas perguntas sobre sua rotina de treinos. Sem julgamentos — só quero entender como é sua vida real. 👊",
+      id: uid(),
+    }]);
+    setTimeout(() => showQuestion(0), 600);
   }
 
   function submitAnswer(value) {
     if (!value.trim()) return;
     const q = QUESTIONS[qIndex];
-
-    // Adiciona resposta do usuário
     setMessages((prev) => [...prev, { type: "user", text: value, id: uid() }]);
     const newAnswers = { ...answers, [q.id]: value };
     setAnswers(newAnswers);
     setInputText("");
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
 
-    // Próxima pergunta
-    const nextIdx = getNextIndex(QUESTIONS, qIndex, newAnswers);
+    const nextIdx = getNextIndex(qIndex, newAnswers);
     if (nextIdx < QUESTIONS.length) {
       setQIndex(nextIdx);
       showQuestion(nextIdx);
     } else {
-      // Fim
       setTimeout(() => {
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
           setMessages((prev) => [
             ...prev,
-            {
-              type: "bot",
-              text: "Obrigado pela sua participação! 🙏 Suas respostas foram registradas e vão nos ajudar muito.",
-              id: uid(),
-            },
+            { type: "bot", text: "Obrigado pela sua participação! 🙏 Suas respostas foram registradas e vão nos ajudar muito.", id: uid() },
           ]);
-          saveResponses(newAnswers);
           setPhase("done");
-        }, 1000);
-      }, 400);
+        }, 900);
+      }, 300);
     }
   }
 
-  async function saveResponses(finalAnswers) {
-    try {
-      const record = {
-        id: sessionId.current,
-        timestamp: new Date().toISOString(),
-        answers: finalAnswers,
-      };
-      // Carrega respostas existentes
-      let all = [];
-      try {
-        const existing = await window.storage.get("survey_responses", true);
-        if (existing?.value) all = JSON.parse(existing.value);
-      } catch (_) {}
-      all.push(record);
-      await window.storage.set("survey_responses", JSON.stringify(all), true);
-      setSaved(true);
-    } catch (e) {
-      console.error("Erro ao salvar:", e);
-    }
-  }
-
-  // Voz
   function toggleVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
-
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
       return;
     }
-
-    const recognition = new SR();
-    recognition.lang = "pt-BR";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognitionRef.current = recognition;
-
-    recognition.onresult = (e) => {
-      const transcript = Array.from(e.results)
-        .map((r) => r[0].transcript)
-        .join("");
-      setInputText(transcript);
+    const r = new SR();
+    r.lang = "pt-BR";
+    r.continuous = false;
+    r.interimResults = true;
+    r.onresult = (e) => {
+      const t = Array.from(e.results).map((x) => x[0].transcript).join("");
+      setInputText(t);
     };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
-
-    recognition.start();
+    r.onend = () => setIsListening(false);
+    r.onerror = () => setIsListening(false);
+    r.start();
+    recognitionRef.current = r;
     setIsListening(true);
   }
 
-  // ─── TELAS ────────────────────────────────────────────────────────────────
+  // ── INTRO ──────────────────────────────────────────────────────────────────
   if (phase === "intro") {
     return (
-      <div style={s.page}>
-        <div style={s.intro}>
-          <div style={s.avatar}>💬</div>
-          <h1 style={s.introTitle}>Como é a sua<br /><em style={{ color: "#25D366" }}>rotina de treinos?</em></h1>
-          <p style={s.introDesc}>
-            Responda algumas perguntas sobre seus hábitos de treino e suplementação.
-            Leva cerca de 5 minutos — pode responder digitando ou pelo microfone. 🎙️
+      <div style={{
+        minHeight: "100dvh",
+        background: BG,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "32px 24px",
+        boxSizing: "border-box",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}>
+        <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 24 }}>💬</div>
+          <h1 style={{
+            fontSize: 28,
+            fontWeight: 300,
+            color: "#f0f0f0",
+            margin: "0 0 16px",
+            lineHeight: 1.3,
+          }}>
+            Como é a sua<br />
+            <em style={{ color: GREEN, fontStyle: "italic" }}>rotina de treinos?</em>
+          </h1>
+          <p style={{ color: "#888", fontSize: 15, lineHeight: 1.7, margin: "0 0 8px" }}>
+            Responda algumas perguntas sobre seus hábitos de treino. Leva cerca de 5 minutos — pode responder digitando ou pelo microfone. 🎙️
           </p>
-          <p style={{ ...s.introDesc, fontSize: 12, color: "#555", marginTop: 8 }}>
+          <p style={{ color: "#555", fontSize: 12, margin: "0 0 32px" }}>
             Suas respostas são anônimas.
           </p>
-          <button style={s.startBtn} onClick={startChat}>
+          <button
+            onClick={startChat}
+            style={{
+              width: "100%",
+              padding: "16px",
+              background: GREEN,
+              color: "#000",
+              border: "none",
+              borderRadius: 32,
+              fontSize: 16,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
             Começar conversa →
           </button>
         </div>
@@ -282,61 +251,165 @@ export default function FormsVoz() {
     );
   }
 
+  // ── CHAT ───────────────────────────────────────────────────────────────────
   return (
-    <div style={s.page}>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      height: "100dvh",
+      background: BG,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      maxWidth: 520,
+      margin: "0 auto",
+      boxSizing: "border-box",
+    }}>
+
       {/* Header */}
-      <div style={s.header}>
-        <div style={s.headerAvatar}>🏋️</div>
-        <div>
-          <div style={s.headerName}>Pesquisa de hábitos</div>
-          <div style={s.headerSub}>
-            {phase === "done" ? "Concluído ✓" : `${Object.keys(answers).length} de ${TOTAL} respondidas`}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "12px 16px",
+        background: SURFACE,
+        borderBottom: `1px solid ${BORDER}`,
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: "50%",
+          background: "#222",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 18, flexShrink: 0,
+        }}>🏋️</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#f0f0f0" }}>Pesquisa de hábitos</div>
+          <div style={{ fontSize: 11, color: "#555" }}>
+            {phase === "done" ? "Concluído ✓" : `${answeredCount} de ${TOTAL} respondidas`}
           </div>
         </div>
-        {phase !== "done" && (
-          <div style={s.progressPill}>{progress}%</div>
-        )}
+        <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, flexShrink: 0 }}>
+          {progress}%
+        </div>
       </div>
 
       {/* Progress bar */}
-      <div style={s.progressTrack}>
-        <div style={{ ...s.progressFill, width: `${progress}%` }} />
+      <div style={{ height: 3, background: "#1e1e1e", flexShrink: 0 }}>
+        <div style={{
+          height: "100%",
+          width: `${progress}%`,
+          background: GREEN,
+          transition: "width 0.5s ease",
+        }} />
       </div>
 
-      {/* Chat */}
-      <div style={s.chat}>
-        {/* Intro do bot */}
-        <BotBubble text="Oi! Vou te fazer algumas perguntas sobre sua rotina de treinos. Sem julgamentos — só quero entender como é sua vida real. 👊" />
+      {/* Messages */}
+      <div style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        WebkitOverflowScrolling: "touch",
+      }}>
+        {messages.map((m) => (
+          m.type === "bot" ? (
+            <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+              {m.block && (
+                <span style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "#444", marginLeft: 4 }}>
+                  {m.block}
+                </span>
+              )}
+              <div style={{
+                background: SURFACE,
+                color: "#e0e0e0",
+                padding: "10px 14px",
+                borderRadius: "4px 16px 16px 16px",
+                fontSize: 14,
+                lineHeight: 1.6,
+                maxWidth: "82%",
+                border: `1px solid ${BORDER}`,
+                wordBreak: "break-word",
+              }}>
+                {m.text}
+              </div>
+            </div>
+          ) : (
+            <div key={m.id} style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{
+                background: "#1a3d28",
+                color: "#d4f0dd",
+                padding: "10px 14px",
+                borderRadius: "16px 4px 16px 16px",
+                fontSize: 14,
+                lineHeight: 1.6,
+                maxWidth: "82%",
+                border: "1px solid #245c35",
+                wordBreak: "break-word",
+              }}>
+                {m.text}
+              </div>
+            </div>
+          )
+        ))}
 
-        {messages.map((m) =>
-          m.type === "bot"
-            ? <BotBubble key={m.id} text={m.text} block={m.block} />
-            : <UserBubble key={m.id} text={m.text} />
+        {isTyping && (
+          <div style={{
+            background: SURFACE,
+            padding: "12px 16px",
+            borderRadius: "4px 16px 16px 16px",
+            display: "flex",
+            gap: 5,
+            alignItems: "center",
+            width: 56,
+            border: `1px solid ${BORDER}`,
+          }}>
+            {[0, 0.2, 0.4].map((delay, i) => (
+              <span key={i} style={{
+                width: 7, height: 7,
+                borderRadius: "50%",
+                background: "#555",
+                display: "inline-block",
+                animation: `bounce 1.2s ${delay}s infinite`,
+              }} />
+            ))}
+          </div>
         )}
-
-        {isTyping && <TypingIndicator />}
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
       {phase === "chat" && !isTyping && currentQ && (
-        <div style={s.inputArea}>
+        <div style={{
+          padding: "12px 16px 20px",
+          background: SURFACE,
+          borderTop: `1px solid ${BORDER}`,
+          flexShrink: 0,
+        }}>
           {currentQ.type === "choice" ? (
-            <div style={s.choices}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {currentQ.options.map((opt) => (
                 <button
                   key={opt}
-                  style={s.choiceBtn}
                   onClick={() => submitAnswer(opt)}
+                  style={{
+                    padding: "10px 16px",
+                    background: "transparent",
+                    border: `1.5px solid ${GREEN}`,
+                    borderRadius: 24,
+                    color: GREEN,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
                 >
                   {opt}
                 </button>
               ))}
             </div>
           ) : (
-            <div style={s.textRow}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
               <textarea
-                style={s.textarea}
                 rows={2}
                 value={inputText}
                 placeholder={isListening ? "🎙️ Ouvindo..." : currentQ.placeholder}
@@ -344,31 +417,58 @@ export default function FormsVoz() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    submitAnswer(inputText);
+                    if (inputText.trim()) submitAnswer(inputText);
                   }
                 }}
+                style={{
+                  flex: 1,
+                  background: "#111",
+                  border: `1px solid ${BORDER}`,
+                  borderRadius: 20,
+                  padding: "10px 14px",
+                  color: "#f0f0f0",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  resize: "none",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
               />
-              <div style={s.btnGroup}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
                 {hasVoice && (
                   <button
-                    style={{
-                      ...s.micBtn,
-                      background: isListening ? "#25D366" : "#1e1e1e",
-                      boxShadow: isListening ? "0 0 0 4px rgba(37,211,102,0.25)" : "none",
-                    }}
                     onClick={toggleVoice}
-                    title="Responder por voz"
+                    style={{
+                      width: 42, height: 42,
+                      borderRadius: "50%",
+                      background: isListening ? GREEN : "#222",
+                      border: "none",
+                      fontSize: 17,
+                      cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: isListening ? `0 0 0 4px rgba(37,211,102,0.2)` : "none",
+                      WebkitTapHighlightColor: "transparent",
+                    }}
                   >
                     {isListening ? "⏹" : "🎙️"}
                   </button>
                 )}
                 <button
-                  style={{
-                    ...s.sendBtn,
-                    opacity: inputText.trim() ? 1 : 0.35,
-                    cursor: inputText.trim() ? "pointer" : "not-allowed",
-                  }}
                   onClick={() => inputText.trim() && submitAnswer(inputText)}
+                  style={{
+                    width: 42, height: 42,
+                    borderRadius: "50%",
+                    background: inputText.trim() ? GREEN : "#222",
+                    border: "none",
+                    color: inputText.trim() ? "#000" : "#555",
+                    fontSize: 20,
+                    fontWeight: 700,
+                    cursor: inputText.trim() ? "pointer" : "not-allowed",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    WebkitTapHighlightColor: "transparent",
+                    transition: "background 0.2s",
+                  }}
                 >
                   ↑
                 </button>
@@ -379,236 +479,29 @@ export default function FormsVoz() {
       )}
 
       {phase === "done" && (
-        <div style={s.doneBar}>
-          {saved ? "✓ Respostas salvas com sucesso" : "Salvando respostas..."}
+        <div style={{
+          padding: "16px",
+          textAlign: "center",
+          fontSize: 13,
+          color: GREEN,
+          background: SURFACE,
+          borderTop: `1px solid ${BORDER}`,
+          flexShrink: 0,
+        }}>
+          ✓ Respostas registradas — obrigado!
         </div>
       )}
 
       <style>{`
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #0a0a0a; }
         @keyframes bounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
           40% { transform: translateY(-5px); opacity: 1; }
         }
-        .d1 { animation: bounce 1.2s infinite 0s; }
-        .d2 { animation: bounce 1.2s infinite 0.2s; }
-        .d3 { animation: bounce 1.2s infinite 0.4s; }
+        textarea::placeholder { color: #555; }
+        button:active { opacity: 0.75; }
       `}</style>
     </div>
   );
 }
-
-// ─── ESTILOS ──────────────────────────────────────────────────────────────────
-const s = {
-  page: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
-    maxWidth: 480,
-    width: "100%",
-    margin: "0 auto",
-  },
-  // INTRO
-  intro: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px 32px",
-    textAlign: "center",
-  },
-  avatar: { fontSize: 52, marginBottom: 24 },
-  introTitle: {
-    fontSize: 30,
-    fontWeight: 300,
-    color: "#f0f0f0",
-    margin: "0 0 16px",
-    lineHeight: 1.3,
-  },
-  introDesc: {
-    color: "#777",
-    fontSize: 15,
-    lineHeight: 1.7,
-    margin: 0,
-    maxWidth: 320,
-  },
-  startBtn: {
-    marginTop: 32,
-    padding: "14px 32px",
-    background: "#25D366",
-    color: "#000",
-    border: "none",
-    borderRadius: 28,
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: "pointer",
-    letterSpacing: 0.3,
-  },
-  // HEADER
-  header: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "14px 16px",
-    background: "#111",
-    borderBottom: "1px solid #1e1e1e",
-    flexShrink: 0,
-  },
-  headerAvatar: {
-    width: 40, height: 40,
-    borderRadius: "50%",
-    background: "#1e1e1e",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: 18,
-  },
-  headerName: { fontSize: 15, fontWeight: 600, color: "#f0f0f0" },
-  headerSub: { fontSize: 12, color: "#555", marginTop: 1 },
-  progressPill: {
-    marginLeft: "auto",
-    fontSize: 12,
-    color: "#25D366",
-    fontWeight: 700,
-    letterSpacing: 0.5,
-  },
-  // PROGRESS
-  progressTrack: {
-    height: 2,
-    background: "#1e1e1e",
-    flexShrink: 0,
-  },
-  progressFill: {
-    height: "100%",
-    background: "#25D366",
-    transition: "width 0.5s ease",
-  },
-  // CHAT
-  chat: {
-    flex: 1,
-    overflowY: "auto",
-    padding: "20px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-  },
-  blockTag: {
-    fontSize: 10,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    color: "#333",
-    marginLeft: 4,
-  },
-  bubble_bot_text: {
-    background: "#1a1a1a",
-    color: "#e8e8e8",
-    padding: "10px 14px",
-    borderRadius: "4px 16px 16px 16px",
-    fontSize: 14,
-    lineHeight: 1.6,
-    maxWidth: "80%",
-    border: "1px solid #252525",
-  },
-  bubble_bot: {
-    background: "#1a1a1a",
-    padding: "12px 16px",
-    borderRadius: "4px 16px 16px 16px",
-    display: "flex",
-    gap: 5,
-    alignItems: "center",
-    width: 52,
-    border: "1px solid #252525",
-  },
-  dot: {
-    width: 6, height: 6,
-    borderRadius: "50%",
-    background: "#555",
-    display: "inline-block",
-  },
-  bubble_user: {
-    background: "#1f4a2e",
-    color: "#e8f5e9",
-    padding: "10px 14px",
-    borderRadius: "16px 4px 16px 16px",
-    fontSize: 14,
-    lineHeight: 1.6,
-    maxWidth: "80%",
-    border: "1px solid #2a5c38",
-  },
-  // INPUT
-  inputArea: {
-    padding: "12px 12px 16px",
-    background: "#0f0f0f",
-    borderTop: "1px solid #1a1a1a",
-    flexShrink: 0,
-  },
-  choices: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  choiceBtn: {
-    padding: "9px 16px",
-    background: "transparent",
-    border: "1px solid #25D366",
-    borderRadius: 20,
-    color: "#25D366",
-    fontSize: 13,
-    cursor: "pointer",
-    transition: "all 0.15s",
-    fontFamily: "inherit",
-  },
-  textRow: {
-    display: "flex",
-    gap: 8,
-    alignItems: "flex-end",
-  },
-  textarea: {
-    flex: 1,
-    background: "#1a1a1a",
-    border: "1px solid #2a2a2a",
-    borderRadius: 20,
-    padding: "10px 16px",
-    color: "#f0f0f0",
-    fontSize: 14,
-    lineHeight: 1.5,
-    resize: "none",
-    fontFamily: "inherit",
-    outline: "none",
-  },
-  btnGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  micBtn: {
-    width: 40, height: 40,
-    borderRadius: "50%",
-    border: "none",
-    fontSize: 16,
-    cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    transition: "all 0.2s",
-    flexShrink: 0,
-  },
-  sendBtn: {
-    width: 40, height: 40,
-    borderRadius: "50%",
-    background: "#25D366",
-    border: "none",
-    color: "#000",
-    fontSize: 20,
-    fontWeight: 700,
-    cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    transition: "opacity 0.2s",
-    flexShrink: 0,
-  },
-  doneBar: {
-    padding: "16px",
-    textAlign: "center",
-    fontSize: 13,
-    color: "#25D366",
-    background: "#0f0f0f",
-    borderTop: "1px solid #1a1a1a",
-    flexShrink: 0,
-  },
-};
