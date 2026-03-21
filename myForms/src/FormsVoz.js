@@ -404,11 +404,8 @@ const s = {
     flexDirection: "column",
     height: "100vh",
     maxWidth: 480,
+    width: "100%",
     margin: "0 auto",
-    background: "#0a0a0a",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    position: "relative",
-    overflow: "hidden",
   },
   // INTRO
   intro: {
