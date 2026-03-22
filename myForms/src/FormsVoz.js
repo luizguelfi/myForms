@@ -42,6 +42,105 @@ function getNextIndex(idx, answers) {
   return idx + 1;
 }
 
+// ── TELA DE AGRADECIMENTO ─────────────────────────────────────────────────────
+function ThankYou({ saveStatus }) {
+  return (
+    <div style={{
+      minHeight: "100dvh",
+      width: "100%",
+      background: "#0a0a0a",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "32px 24px",
+      boxSizing: "border-box",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    }}>
+      <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+
+        {/* Ícone animado */}
+        <div style={{
+          width: 80, height: 80,
+          borderRadius: "50%",
+          background: "#0d2e1a",
+          border: `2px solid ${GREEN}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 36,
+          margin: "0 auto 28px",
+          animation: "popIn 0.4s ease",
+        }}>
+          🙏
+        </div>
+
+        <h1 style={{
+          fontSize: "clamp(24px, 7vw, 32px)",
+          fontWeight: 300,
+          color: "#f0f0f0",
+          margin: "0 0 16px",
+          lineHeight: 1.3,
+        }}>
+          Obrigado pela<br />
+          <em style={{ color: GREEN, fontStyle: "italic" }}>sua participação!</em>
+        </h1>
+
+        <p style={{
+          color: "#777",
+          fontSize: "clamp(14px, 4vw, 16px)",
+          lineHeight: 1.7,
+          margin: "0 0 32px",
+          maxWidth: 320,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}>
+          Suas respostas vão nos ajudar a entender melhor a rotina de quem treina de verdade.
+        </p>
+
+        {/* Status do salvamento */}
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 20px",
+          borderRadius: 24,
+          background: saveStatus === "error" ? "#2e0d0d" : "#0d2e1a",
+          border: `1px solid ${saveStatus === "error" ? "#7a2020" : "#1a5c35"}`,
+          fontSize: 13,
+          color: saveStatus === "error" ? "#ff8080" : GREEN,
+        }}>
+          {saveStatus === "saving" && <><span style={{ animation: "spin 1s linear infinite", display:"inline-block" }}>⏳</span> Salvando...</>}
+          {saveStatus === "ok"     && <><span>✓</span> Respostas salvas com sucesso</>}
+          {saveStatus === "error"  && <><span>⚠️</span> Erro ao salvar — tente novamente</>}
+        </div>
+
+        {/* Linha decorativa */}
+        <div style={{
+          marginTop: 48,
+          paddingTop: 32,
+          borderTop: "1px solid #1a1a1a",
+        }}>
+          <p style={{ color: "#333", fontSize: 12, margin: 0, lineHeight: 1.7 }}>
+            Estamos estudando formas de tornar<br />a rotina fitness mais inteligente e conveniente.
+          </p>
+        </div>
+
+      </div>
+
+      <style>{`
+        @keyframes popIn {
+          0%   { transform: scale(0.5); opacity: 0; }
+          70%  { transform: scale(1.1); }
+          100% { transform: scale(1);   opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── APP PRINCIPAL ─────────────────────────────────────────────────────────────
 export default function FormsVoz() {
   const [phase, setPhase]             = useState("intro");
   const [qIndex, setQIndex]           = useState(0);
@@ -97,12 +196,11 @@ export default function FormsVoz() {
       setTimeout(() => pushBot(QUESTIONS[nextIdx].text, QUESTIONS[nextIdx].block), 300);
     } else {
       setTimeout(async () => {
-        pushBot("Obrigado pela sua participação! 🙏 Suas respostas foram registradas e vão nos ajudar muito.");
         setPhase("done");
         setSaveStatus("saving");
         try { await saveToAirtable(next); setSaveStatus("ok"); }
         catch { setSaveStatus("error"); }
-      }, 300);
+      }, 400);
     }
   }
 
@@ -118,7 +216,7 @@ export default function FormsVoz() {
     r.start(); recognitionRef.current = r; setIsListening(true);
   }
 
-  // ── INTRO ─────────────────────────────────────────────────────────────────
+  // ── TELAS ─────────────────────────────────────────────────────────────────
   if (phase === "intro") return (
     <div style={{ minHeight:"100dvh", width:"100%", background:"#0a0a0a", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px", fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxSizing:"border-box" }}>
       <div style={{ width:"100%", maxWidth:400, textAlign:"center" }}>
@@ -137,7 +235,8 @@ export default function FormsVoz() {
     </div>
   );
 
-  // ── CHAT ──────────────────────────────────────────────────────────────────
+  if (phase === "done") return <ThankYou saveStatus={saveStatus} />;
+
   return (
     <div style={{ display:"flex", flexDirection:"column", width:"100%", height:"100dvh", background:"#0a0a0a", fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow:"hidden" }}>
 
@@ -146,7 +245,7 @@ export default function FormsVoz() {
         <div style={{ width:38, height:38, borderRadius:"50%", background:"#1e1e1e", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🏋️</div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:"clamp(13px, 4vw, 15px)", fontWeight:600, color:"#f0f0f0" }}>Pesquisa de hábitos</div>
-          <div style={{ fontSize:11, color:"#555" }}>{phase==="done" ? "Concluído ✓" : `${answered} de ${TOTAL} respondidas`}</div>
+          <div style={{ fontSize:11, color:"#555" }}>{`${answered} de ${TOTAL} respondidas`}</div>
         </div>
         <div style={{ fontSize:13, fontWeight:700, color:GREEN, flexShrink:0 }}>{progress}%</div>
       </div>
@@ -183,66 +282,30 @@ export default function FormsVoz() {
         <div ref={bottomRef} />
       </div>
 
-      {/* ── INPUT AREA ──────────────────────────────────────────────────────── */}
-      {phase==="chat" && !isTyping && currentQ && (
+      {/* Input */}
+      {!isTyping && currentQ && (
         <div style={{ padding:"16px 16px 28px", background:"#111", borderTop:"1px solid #222", flexShrink:0 }}>
 
-          {/* MÚLTIPLA ESCOLHA — pills grandes, largura total */}
+          {/* MÚLTIPLA ESCOLHA */}
           {currentQ.type==="choice" && (
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               {currentQ.options.map(opt => (
                 <button key={opt} onClick={() => submitAnswer(opt)}
-                  style={{
-                    width:"100%",
-                    padding:"14px 20px",
-                    background:"transparent",
-                    border:`1.5px solid ${GREEN}`,
-                    borderRadius:14,
-                    color:GREEN,
-                    fontSize:"clamp(14px, 4vw, 16px)",
-                    fontWeight:500,
-                    cursor:"pointer",
-                    fontFamily:"inherit",
-                    textAlign:"left",
-                    WebkitTapHighlightColor:"transparent",
-                    transition:"background 0.15s",
-                  }}
-                  onTouchStart={e => e.currentTarget.style.background="#0d2e1a"}
-                  onTouchEnd={e => e.currentTarget.style.background="transparent"}
-                >
+                  style={{ width:"100%", padding:"14px 20px", background:"transparent", border:`1.5px solid ${GREEN}`, borderRadius:14, color:GREEN, fontSize:"clamp(14px, 4vw, 16px)", fontWeight:500, cursor:"pointer", fontFamily:"inherit", textAlign:"left", WebkitTapHighlightColor:"transparent" }}>
                   {opt}
                 </button>
               ))}
             </div>
           )}
 
-          {/* RESPOSTA ABERTA — voz em destaque, texto como secundário */}
+          {/* RESPOSTA ABERTA */}
           {currentQ.type==="voice" && (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
 
               {/* Botão de voz — protagonista */}
               {hasVoice && (
                 <button onClick={toggleVoice}
-                  style={{
-                    width:"100%",
-                    padding:"18px",
-                    background: isListening ? GREEN : "#1a2e1e",
-                    border:`2px solid ${GREEN}`,
-                    borderRadius:16,
-                    color: isListening ? "#000" : GREEN,
-                    fontSize:16,
-                    fontWeight:700,
-                    cursor:"pointer",
-                    fontFamily:"inherit",
-                    display:"flex",
-                    alignItems:"center",
-                    justifyContent:"center",
-                    gap:10,
-                    WebkitTapHighlightColor:"transparent",
-                    transition:"all 0.2s",
-                    boxShadow: isListening ? `0 0 0 4px rgba(37,211,102,0.2)` : "none",
-                  }}
-                >
+                  style={{ width:"100%", padding:"18px", background:isListening ? GREEN : "#1a2e1e", border:`2px solid ${GREEN}`, borderRadius:16, color:isListening ? "#000" : GREEN, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:10, WebkitTapHighlightColor:"transparent", transition:"all 0.2s", boxShadow:isListening ? "0 0 0 4px rgba(37,211,102,0.2)" : "none" }}>
                   <span style={{ fontSize:22 }}>{isListening ? "⏹" : "🎙️"}</span>
                   <span>{isListening ? "Tocando para parar..." : "Toca para falar"}</span>
                 </button>
@@ -275,17 +338,8 @@ export default function FormsVoz() {
                   ↑
                 </button>
               </div>
-
             </div>
           )}
-        </div>
-      )}
-
-      {phase==="done" && (
-        <div style={{ padding:"14px 16px", textAlign:"center", fontSize:13, color:saveStatus==="error" ? "#ff6b6b" : GREEN, background:"#111", borderTop:"1px solid #222", flexShrink:0 }}>
-          {saveStatus==="saving" && "Salvando respostas..."}
-          {saveStatus==="ok"     && "✓ Respostas salvas com sucesso!"}
-          {saveStatus==="error"  && "⚠️ Erro ao salvar. Tente novamente."}
         </div>
       )}
 
