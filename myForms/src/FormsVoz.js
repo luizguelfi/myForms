@@ -7,7 +7,7 @@ const AIRTABLE_TABLE = "respostas";
 
 async function saveToAirtable(answers) {
   try {
-    const fields = { timestamp: new Date().toISOString(), ...answers };
+    const fields = { ...answers };
     const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" },
