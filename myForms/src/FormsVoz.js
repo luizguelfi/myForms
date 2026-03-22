@@ -209,7 +209,7 @@ export default function FormsVoz() {
     if (!SR) return;
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const r = new SR();
-    r.lang = "pt-BR"; r.continuous = false; r.interimResults = true;
+    r.lang = "pt-BR"; r.continuous = true; r.interimResults = true;
     r.onresult = e => setInputText(Array.from(e.results).map(x => x[0].transcript).join(""));
     r.onend  = () => setIsListening(false);
     r.onerror = () => setIsListening(false);
