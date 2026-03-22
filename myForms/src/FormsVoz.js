@@ -6,15 +6,21 @@ const AIRTABLE_BASE  = "appF6xeb2ltmPwRXr";
 const AIRTABLE_TABLE = "respostas";
 
 async function saveToAirtable(answers) {
-  const fields = { timestamp: new Date().toISOString(), ...answers };
-  const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+  try {
+    const fields = { timestamp: new Date().toISOString(), ...answers };
+    const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const e = await res.json(); msg = e?.error?.message || msg; } catch(_) {}
+      return { ok: false, error: msg };
+    }
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, error: e.message || "Erro de rede" };
   }
 }
 
@@ -233,8 +239,13 @@ export default function FormsVoz() {
       setTimeout(async () => {
         setPhase("done");
         setSaveStatus("saving");
-        try { await saveToAirtable(next); setSaveStatus("ok"); }
-        catch(e) { setSaveError(e.message || "desconhecido"); setSaveStatus("error"); }
+        const result = await saveToAirtable(next);
+        if (result.ok) {
+          setSaveStatus("ok");
+        } else {
+          setSaveError(result.error || "desconhecido");
+          setSaveStatus("error");
+        }
       }, 400);
     }
   }
