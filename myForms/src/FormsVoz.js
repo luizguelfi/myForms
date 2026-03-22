@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 
 const AIRTABLE_TOKEN = "pat1tMoSJCwycnUXt.c71bfed349e29283812c39426a6453c3a7fa5b95c657652ab15e631e8a5c1c94";
 const AIRTABLE_BASE  = "appF6xeb2ltmPwRXr";
-const AIRTABLE_TABLE = "Table%201";
+const AIRTABLE_TABLE = "resp-treinos";
 
 async function saveToAirtable(answers) {
   const fields = { timestamp: new Date().toISOString(), ...answers };
