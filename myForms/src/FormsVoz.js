@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 
 const AIRTABLE_TOKEN = "pat1tMoSJCwycnUXt.c71bfed349e29283812c39426a6453c3a7fa5b95c657652ab15e631e8a5c1c94";
 const AIRTABLE_BASE  = "appF6xeb2ltmPwRXr";
-const AIRTABLE_TABLE = "resp-treinos";
+const AIRTABLE_TABLE = "respostas";
 
 async function saveToAirtable(answers) {
   const fields = { timestamp: new Date().toISOString(), ...answers };
@@ -18,14 +18,14 @@ const QUESTIONS = [
   { id:"q2",  block:"Bloco 01 · Sua rotina",         type:"choice", text:"Onde você costuma treinar?",                                                                                              options:["Academia convencional","Studio / aulas marcadas","Em casa","Mais de um ambiente"] },
   { id:"q3",  block:"Bloco 01 · Sua rotina",         type:"choice", text:"Com que frequência você treina por semana?",                                                                              options:["1 a 2 vezes","3 a 4 vezes","5 vezes ou mais","Varia muito"] },
   { id:"q4",  block:"Bloco 02 · O que você consome", type:"choice", text:"Você consome algum suplemento ligado aos treinos? (whey, creatina, BCAA...)",                                            options:["Sim, regularmente","Sim, às vezes","Não consumo","Já consumi mas parei"], skipIf:a=>a==="Não consumo", skipTo:"q11" },
-  { id:"q5",  block:"Bloco 02 · O que você consome", type:"voice",  text:"Pensa na sua última semana de treinos. O que você consumiu antes, durante ou depois — conta como você fez isso.",        placeholder:"Fala ou digita à vontade..." },
-  { id:"q6",  block:"Bloco 03 · Preparação",         type:"voice",  text:"Como você normalmente se prepara antes de sair para treinar? O que você pensa, separa, leva?",                           placeholder:"Conta como é esse processo pra você..." },
-  { id:"q7",  block:"Bloco 03 · Preparação",         type:"voice",  text:"Já aconteceu de chegar no treino e perceber que esqueceu algo que queria ter consumido? Como foi?",                      placeholder:"Se aconteceu, descreve a situação..." },
-  { id:"q8",  block:"Bloco 03 · Preparação",         type:"voice",  text:"Tem alguma parte da sua rotina de suplementação que você acha trabalhosa ou preferia que fosse diferente?",              placeholder:"Pode ser qualquer coisa..." },
-  { id:"q9",  block:"Bloco 04 · O que você tentou",  type:"voice",  text:"Você já tentou alguma forma de tornar sua rotina de suplementação mais prática? O que funcionou, o que não funcionou?",  placeholder:"Me conta..." },
-  { id:"q10", block:"Bloco 04 · O que você tentou",  type:"voice",  text:"Você usa ou já usou algum serviço de conveniência fitness? (marmitas, personal, apps, assinaturas...)",                 placeholder:"Pode citar qualquer serviço..." },
-  { id:"q11", block:"Bloco 05 · O que importa",      type:"voice",  text:"Quando o assunto é suplementação, o que é mais importante pra você?",                                                    placeholder:"Lista por ordem de prioridade se quiser..." },
-  { id:"q12", block:"Bloco 05 · O que importa",      type:"voice",  text:"Se você pudesse mudar uma coisa — só uma — na forma como cuida da sua nutrição e suplementação hoje, o que seria?",     placeholder:"Pode ser qualquer coisa..." },
+  { id:"q5",  block:"Bloco 02 · O que você consome", type:"voice",  text:"Pensa na sua última semana de treinos. O que você consumiu antes, durante ou depois — conta como você fez isso.",        placeholder:"Ou digita aqui se preferir..." },
+  { id:"q6",  block:"Bloco 03 · Preparação",         type:"voice",  text:"Como você normalmente se prepara antes de sair para treinar? O que você pensa, separa, leva?",                           placeholder:"Ou digita aqui se preferir..." },
+  { id:"q7",  block:"Bloco 03 · Preparação",         type:"voice",  text:"Já aconteceu de chegar no treino e perceber que esqueceu algo que queria ter consumido? Como foi?",                      placeholder:"Ou digita aqui se preferir..." },
+  { id:"q8",  block:"Bloco 03 · Preparação",         type:"voice",  text:"Tem alguma parte da sua rotina de suplementação que você acha trabalhosa ou preferia que fosse diferente?",              placeholder:"Ou digita aqui se preferir..." },
+  { id:"q9",  block:"Bloco 04 · O que você tentou",  type:"voice",  text:"Você já tentou alguma forma de tornar sua rotina de suplementação mais prática? O que funcionou, o que não funcionou?",  placeholder:"Ou digita aqui se preferir..." },
+  { id:"q10", block:"Bloco 04 · O que você tentou",  type:"voice",  text:"Você usa ou já usou algum serviço de conveniência fitness? (marmitas, personal, apps, assinaturas...)",                 placeholder:"Ou digita aqui se preferir..." },
+  { id:"q11", block:"Bloco 05 · O que importa",      type:"voice",  text:"Quando o assunto é suplementação, o que é mais importante pra você?",                                                    placeholder:"Ou digita aqui se preferir..." },
+  { id:"q12", block:"Bloco 05 · O que importa",      type:"voice",  text:"Se você pudesse mudar uma coisa — só uma — na forma como cuida da sua nutrição e suplementação hoje, o que seria?",     placeholder:"Ou digita aqui se preferir..." },
 ];
 
 const TOTAL = QUESTIONS.length;
@@ -43,15 +43,15 @@ function getNextIndex(idx, answers) {
 }
 
 export default function FormsVoz() {
-  const [phase, setPhase]           = useState("intro");
-  const [qIndex, setQIndex]         = useState(0);
-  const [answers, setAnswers]       = useState({});
-  const [messages, setMessages]     = useState([]);
-  const [inputText, setInputText]   = useState("");
-  const [isTyping, setIsTyping]     = useState(false);
+  const [phase, setPhase]             = useState("intro");
+  const [qIndex, setQIndex]           = useState(0);
+  const [answers, setAnswers]         = useState({});
+  const [messages, setMessages]       = useState([]);
+  const [inputText, setInputText]     = useState("");
+  const [isTyping, setIsTyping]       = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [hasVoice, setHasVoice]     = useState(false);
-  const [saveStatus, setSaveStatus] = useState("idle");
+  const [hasVoice, setHasVoice]       = useState(false);
+  const [saveStatus, setSaveStatus]   = useState("idle");
   const bottomRef      = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -118,6 +118,7 @@ export default function FormsVoz() {
     r.start(); recognitionRef.current = r; setIsListening(true);
   }
 
+  // ── INTRO ─────────────────────────────────────────────────────────────────
   if (phase === "intro") return (
     <div style={{ minHeight:"100dvh", width:"100%", background:"#0a0a0a", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px", fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", boxSizing:"border-box" }}>
       <div style={{ width:"100%", maxWidth:400, textAlign:"center" }}>
@@ -126,7 +127,7 @@ export default function FormsVoz() {
           Como é a sua<br /><em style={{ color:GREEN, fontStyle:"italic" }}>rotina de treinos?</em>
         </h1>
         <p style={{ color:"#888", fontSize:"clamp(14px, 4vw, 16px)", lineHeight:1.7, margin:"0 0 8px" }}>
-          Responda algumas perguntas sobre seus hábitos de treino. Leva cerca de 5 minutos — pode digitar ou usar o microfone. 🎙️
+          Responda algumas perguntas sobre seus hábitos de treino. Leva cerca de 5 minutos.
         </p>
         <p style={{ color:"#555", fontSize:12, margin:"0 0 32px" }}>Suas respostas são anônimas.</p>
         <button onClick={startChat} style={{ width:"100%", padding:16, background:GREEN, color:"#000", border:"none", borderRadius:32, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
@@ -136,6 +137,7 @@ export default function FormsVoz() {
     </div>
   );
 
+  // ── CHAT ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ display:"flex", flexDirection:"column", width:"100%", height:"100dvh", background:"#0a0a0a", fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow:"hidden" }}>
 
@@ -154,7 +156,7 @@ export default function FormsVoz() {
         <div style={{ height:"100%", width:`${progress}%`, background:GREEN, transition:"width 0.5s ease" }} />
       </div>
 
-      {/* Chat area */}
+      {/* Messages */}
       <div style={{ flex:1, overflowY:"auto", padding:16, display:"flex", flexDirection:"column", gap:10, WebkitOverflowScrolling:"touch" }}>
         {messages.map(m => m.type==="bot" ? (
           <div key={m.id} style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:2 }}>
@@ -181,38 +183,99 @@ export default function FormsVoz() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* ── INPUT AREA ──────────────────────────────────────────────────────── */}
       {phase==="chat" && !isTyping && currentQ && (
-        <div style={{ padding:"12px 16px 28px", background:"#111", borderTop:"1px solid #222", flexShrink:0 }}>
-          {currentQ.type==="choice" ? (
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+        <div style={{ padding:"16px 16px 28px", background:"#111", borderTop:"1px solid #222", flexShrink:0 }}>
+
+          {/* MÚLTIPLA ESCOLHA — pills grandes, largura total */}
+          {currentQ.type==="choice" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               {currentQ.options.map(opt => (
                 <button key={opt} onClick={() => submitAnswer(opt)}
-                  style={{ padding:"10px 16px", background:"transparent", border:`1.5px solid ${GREEN}`, borderRadius:24, color:GREEN, fontSize:"clamp(13px, 3.5vw, 14px)", cursor:"pointer", fontFamily:"inherit", WebkitTapHighlightColor:"transparent" }}>
+                  style={{
+                    width:"100%",
+                    padding:"14px 20px",
+                    background:"transparent",
+                    border:`1.5px solid ${GREEN}`,
+                    borderRadius:14,
+                    color:GREEN,
+                    fontSize:"clamp(14px, 4vw, 16px)",
+                    fontWeight:500,
+                    cursor:"pointer",
+                    fontFamily:"inherit",
+                    textAlign:"left",
+                    WebkitTapHighlightColor:"transparent",
+                    transition:"background 0.15s",
+                  }}
+                  onTouchStart={e => e.currentTarget.style.background="#0d2e1a"}
+                  onTouchEnd={e => e.currentTarget.style.background="transparent"}
+                >
                   {opt}
                 </button>
               ))}
             </div>
-          ) : (
-            <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
-              <textarea rows={2} value={inputText}
-                placeholder={isListening ? "🎙️ Ouvindo..." : currentQ.placeholder}
-                onChange={e => setInputText(e.target.value)}
-                onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); if (inputText.trim()) submitAnswer(inputText); }}}
-                style={{ flex:1, minWidth:0, background:"#0d0d0d", border:"1px solid #2a2a2a", borderRadius:20, padding:"10px 14px", color:"#f0f0f0", fontSize:"clamp(14px, 4vw, 15px)", lineHeight:1.5, resize:"none", fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
-              />
-              <div style={{ display:"flex", flexDirection:"column", gap:6, flexShrink:0 }}>
-                {hasVoice && (
-                  <button onClick={toggleVoice}
-                    style={{ width:44, height:44, borderRadius:"50%", background:isListening ? GREEN : "#1e1e1e", border:"none", fontSize:18, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isListening ? "0 0 0 4px rgba(37,211,102,0.2)" : "none", WebkitTapHighlightColor:"transparent" }}>
-                    {isListening ? "⏹" : "🎙️"}
-                  </button>
-                )}
+          )}
+
+          {/* RESPOSTA ABERTA — voz em destaque, texto como secundário */}
+          {currentQ.type==="voice" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+
+              {/* Botão de voz — protagonista */}
+              {hasVoice && (
+                <button onClick={toggleVoice}
+                  style={{
+                    width:"100%",
+                    padding:"18px",
+                    background: isListening ? GREEN : "#1a2e1e",
+                    border:`2px solid ${GREEN}`,
+                    borderRadius:16,
+                    color: isListening ? "#000" : GREEN,
+                    fontSize:16,
+                    fontWeight:700,
+                    cursor:"pointer",
+                    fontFamily:"inherit",
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:10,
+                    WebkitTapHighlightColor:"transparent",
+                    transition:"all 0.2s",
+                    boxShadow: isListening ? `0 0 0 4px rgba(37,211,102,0.2)` : "none",
+                  }}
+                >
+                  <span style={{ fontSize:22 }}>{isListening ? "⏹" : "🎙️"}</span>
+                  <span>{isListening ? "Tocando para parar..." : "Toca para falar"}</span>
+                </button>
+              )}
+
+              {/* Transcrição em tempo real */}
+              {isListening && inputText && (
+                <div style={{ background:"#0d1a0d", border:"1px solid #1a3d1a", borderRadius:12, padding:"10px 14px", fontSize:14, color:"#aaa", lineHeight:1.6, fontStyle:"italic" }}>
+                  {inputText}
+                </div>
+              )}
+
+              {/* Divider */}
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ flex:1, height:1, background:"#222" }} />
+                <span style={{ fontSize:11, color:"#444", letterSpacing:1 }}>OU</span>
+                <div style={{ flex:1, height:1, background:"#222" }} />
+              </div>
+
+              {/* Texto — opção secundária */}
+              <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
+                <textarea rows={2} value={inputText}
+                  placeholder={currentQ.placeholder}
+                  onChange={e => setInputText(e.target.value)}
+                  onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); if (inputText.trim()) submitAnswer(inputText); }}}
+                  style={{ flex:1, minWidth:0, background:"#0d0d0d", border:"1px solid #2a2a2a", borderRadius:12, padding:"10px 14px", color:"#f0f0f0", fontSize:"clamp(14px, 4vw, 15px)", lineHeight:1.5, resize:"none", fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
+                />
                 <button onClick={() => inputText.trim() && submitAnswer(inputText)}
-                  style={{ width:44, height:44, borderRadius:"50%", background:inputText.trim() ? GREEN : "#1e1e1e", border:"none", color:inputText.trim() ? "#000" : "#444", fontSize:22, fontWeight:700, cursor:inputText.trim() ? "pointer" : "not-allowed", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.2s", WebkitTapHighlightColor:"transparent" }}>
+                  style={{ width:44, height:44, borderRadius:"50%", background:inputText.trim() ? GREEN : "#1e1e1e", border:"none", color:inputText.trim() ? "#000" : "#444", fontSize:22, fontWeight:700, cursor:inputText.trim() ? "pointer" : "not-allowed", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.2s", WebkitTapHighlightColor:"transparent", flexShrink:0 }}>
                   ↑
                 </button>
               </div>
+
             </div>
           )}
         </div>
@@ -229,7 +292,7 @@ export default function FormsVoz() {
       <style>{`
         @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-5px);opacity:1}}
         textarea::placeholder{color:#555}
-        button:active{opacity:.75}
+        button:active{opacity:.8}
       `}</style>
     </div>
   );
