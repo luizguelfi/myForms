@@ -99,7 +99,7 @@ function BlockHeader({ blockId }) {
 }
 
 // ─── THANK YOU ────────────────────────────────────────────────────────────────
-function ThankYou({ saveStatus }) {
+function ThankYou({ saveStatus, saveError }) {
   return (
     <div style={{ minHeight:"100dvh", width:"100%", background: C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px", boxSizing:"border-box", fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <div style={{ width:"100%", maxWidth:400, textAlign:"center" }}>
@@ -289,7 +289,7 @@ export default function FormsVoz() {
     </div>
   );
 
-  if (phase === "done") return <ThankYou saveStatus={saveStatus} />;
+  if (phase === "done") return <ThankYou saveStatus={saveStatus} saveError={saveError} />;
 
   // ── CHAT ─────────────────────────────────────────────────────────────────────
   return (
