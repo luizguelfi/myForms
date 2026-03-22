@@ -73,7 +73,7 @@ function BlockHeader({ blockId }) {
   const b = BLOCKS.find(x => x.id === blockId);
   if (!b) return null;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0 6px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 10px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: C.textDim, fontWeight: 600 }}>
           {b.label}
@@ -237,7 +237,15 @@ export default function FormsVoz() {
   function toggleVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      // pequeno delay para garantir que a transcrição final chegou
+      setTimeout(() => {
+        setInputText(prev => { if (prev.trim()) submitAnswer(prev); return ""; });
+      }, 300);
+      return;
+    }
     const r = new SR();
     r.lang = "pt-BR"; r.continuous = true; r.interimResults = true;
     r.onresult = e => setInputText(Array.from(e.results).map(x => x[0].transcript).join(""));
@@ -370,7 +378,7 @@ export default function FormsVoz() {
                 <button onClick={toggleVoice}
                   style={{ width:"100%", padding:"18px", background:isListening ? C.accent : C.accentDim, border:`2px solid ${C.accent}`, borderRadius:16, color:isListening ? "#000" : C.accent, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:10, WebkitTapHighlightColor:"transparent", transition:"all 0.2s", boxShadow:isListening ? `0 0 0 4px rgba(126,184,212,0.2)` : "none" }}>
                   <span style={{ fontSize:22 }}>{isListening ? "⏹" : "🎙️"}</span>
-                  <span>{isListening ? "Tocando para parar..." : "Toca para falar"}</span>
+                  <span>{isListening ? "Toca para enviar →" : "Toca para falar"}</span>
                 </button>
               )}
 
