@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // ─── AIRTABLE ─────────────────────────────────────────────────────────────────
-const AIRTABLE_TOKEN = "pat9AFggLM7iwdFQf.93e843fddd0fb5871e8e98eba3a996ff0805406e698afb0575d01be27d9f5b3f";
+const AIRTABLE_TOKEN = "pat1tMoSJCwycnUXt.c71bfed349e29283812c39426a6453c3a7fa5b95c657652ab15e631e8a5c1c94";
 const AIRTABLE_BASE  = "appF6xeb2ltmPwRXr";
 const AIRTABLE_TABLE = "respostas";
 
@@ -110,7 +110,7 @@ function ThankYou({ saveStatus }) {
         <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:24, background: saveStatus==="error" ? "#2e0d0d" : C.accentDim, border:`1px solid ${saveStatus==="error" ? "#7a2020" : C.accentBorder}`, fontSize:13, color: saveStatus==="error" ? "#ff8080" : C.accent }}>
           {saveStatus==="saving" && <><span style={{ animation:"spin 1s linear infinite", display:"inline-block" }}>⏳</span> Salvando...</>}
           {saveStatus==="ok"     && <><span>✓</span> Respostas salvas com sucesso</>}
-          {saveStatus==="error"  && <><span>⚠️</span> Erro ao salvar</>}
+          {saveStatus==="error"  && <><span>⚠️</span> Erro: {saveError}</>}
         </div>
         <div style={{ marginTop:48, paddingTop:32, borderTop:`1px solid ${C.border}` }}>
           <p style={{ color: C.textDim, fontSize:12, margin:0, lineHeight:1.7 }}>
@@ -137,6 +137,7 @@ export default function FormsVoz() {
   const [isListening, setIsListening] = useState(false);
   const [hasVoice, setHasVoice]       = useState(false);
   const [saveStatus, setSaveStatus]   = useState("idle");
+  const [saveError, setSaveError]       = useState("");
   const [editingId, setEditingId]     = useState(null); // id da pergunta sendo reditada
   const bottomRef      = useRef(null);
   const recognitionRef = useRef(null);
@@ -233,7 +234,7 @@ export default function FormsVoz() {
         setPhase("done");
         setSaveStatus("saving");
         try { await saveToAirtable(next); setSaveStatus("ok"); }
-        catch { setSaveStatus("error"); }
+        catch(e) { setSaveError(e.message || "desconhecido"); setSaveStatus("error"); }
       }, 400);
     }
   }
