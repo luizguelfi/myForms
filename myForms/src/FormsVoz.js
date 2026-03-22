@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 
 // ─── AIRTABLE ─────────────────────────────────────────────────────────────────
-const AIRTABLE_TOKEN = "pat1tMoSJCwycnUXt.c71bfed349e29283812c39426a6453c3a7fa5b95c657652ab15e631e8a5c1c94";
+const AIRTABLE_TOKEN = "pat9AFggLM7iwdFQf.93e843fddd0fb5871e8e98eba3a996ff0805406e698afb0575d01be27d9f5b3f";
 const AIRTABLE_BASE  = "appF6xeb2ltmPwRXr";
 const AIRTABLE_TABLE = "respostas";
 
 async function saveToAirtable(answers) {
   const fields = { timestamp: new Date().toISOString(), ...answers };
-  await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
+  const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({ fields }),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${res.status}`);
+  }
 }
 
 // ─── PALETA ───────────────────────────────────────────────────────────────────
